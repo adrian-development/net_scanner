@@ -42,9 +42,11 @@ fi
 while true ; do
 
     #Erkenne alle Geräte im Netzwerk
-    IPs=$(sudo arp-scan --localnet --numeric --quiet --ignoredups | grep -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | awk '{print $1}')
+    IPs=$(sudo arp-scan --localnet --numeric --quiet --ignoredups --bandwidth 1000000 | grep -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | awk '{print $1}')
 
     echo "${IPs}"
+
+    ping $IPs
 
     #Zusätzliche pings
     for item in ${ping_adress_arr[*]}
