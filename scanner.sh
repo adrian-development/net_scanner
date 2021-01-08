@@ -3,7 +3,6 @@
 echo "Netzwerkscanner gestartet"
 
 #Variablen initialisieren
-ping_flag= 
 ping_adress_arr=
 ping_adress_count=0
 
@@ -11,10 +10,13 @@ ping_adress_count=0
 while [[ ${1::1} == '-' ]] ; do
     case $1 in
         --ping|-p)
-            ping_flag = 1
+            echo "Extra Pings ausgewählt"
             shift
-            ping_adress[ping_adress_count]=$1
-            ((ping_adress_count++))
+            while [ "${1::1}" != '-' -a -n "${1::1}" ] ; do
+                ping_adress_arr[${ping_adress_count}]=$1
+                (( ping_adress_count++ ))
+                shift
+            done
             ;;
 
         *)
@@ -25,7 +27,7 @@ while [[ ${1::1} == '-' ]] ; do
 
 done
 
-
+echo ${ping_adress_arr[0]}
 
 #Prüfe Vorausetzungen
 
@@ -43,6 +45,13 @@ while true ; do
     IPs=$(sudo arp-scan --localnet --numeric --quiet --ignoredups | grep -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | awk '{print $1}')
 
     echo "${IPs}"
+
+    #Zusätzliche pings
+    for item in ${ping_adress_arr[*]}
+    do
+        echo ping geht los
+        ping -q -n -c 1 "${item}"
+    done
 
     sleep 5
 
