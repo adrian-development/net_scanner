@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FILENAME="data"
+FILENAME="scan.dat"
 
 echo start
 

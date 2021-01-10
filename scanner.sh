@@ -6,9 +6,8 @@ echo "Netzwerkscanner gestartet"
 OUTPUT_FILE="./scan.dat"
 
 #Variablen initialisieren
-ping_adress_arr=
-ping_adress_count=0
 IPs=
+OutputLine=
 
 
 #Optionen Ermitteln
@@ -56,6 +55,9 @@ echo Zeit ${IPs} >$OUTPUT_FILE
 #Zyklischer Aufruf
 while true ; do
 
+    #Get time for Output File
+    OutputLine=$(date +"%H.%M.%S")
+
     #Erkenne alle Geräte im Netzwerk mit arp-scan
     #IPs=$(sudo arp-scan --localnet --numeric --quiet --ignoredups --bandwidth 1000000 | grep -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | awk '{print $1}')
 
@@ -66,9 +68,6 @@ while true ; do
     for IP in $IPs ;  do
         #Output for Console
         echo -n "Ping an ${IP}: "
-
-        #Get time for Output File
-        date +"%H:%M" >>$OUTPUT_FILE
 
         #Sende einen Ping
         ping_output=$(ping -q -n -w 1 -c 1 "${IP}")
@@ -88,23 +87,23 @@ while true ; do
 
         #Zeige Ping Zeit wenn Ping erfolgreich war
         if [[ $ping_ok == "ok" ]] ; then
-            ping_time=$(echo "${ping_output}" | grep "rtt" | perl -npe 's/.*=\s([0-9.]*)\/.*/$1 ms\n/')
-            echo $ping_time
+            ping_time=$(echo "${ping_output}" | grep "rtt" | perl -npe 's/.*=\s([0-9.]*)\/.*/$1\n/')
+            echo $ping_time ms
 
-            #Speichern in Ausgabe
-            echo -n $ping_time >>$OUTPUT_FILE
+            #Ausgabepuffer
+            OutputLine="${OutputLine} ${ping_time}"
         else   
             echo "Error"
 
-            #Speichern in Ausgabe
-            echo 999 >>$OUTPUT_FILE
+            #Ausgabepuffer
+            OutputLine="${OutputLine} 999"
         fi
 
 
     done
 
-    #Newline to Output File
-    echo "" >>$OUTPUT_FILE
+    #Save scan to File
+    echo $OutputLine >>$OUTPUT_FILE
 
     sleep 5
 
