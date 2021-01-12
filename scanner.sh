@@ -56,7 +56,7 @@ echo Zeit ${IPs} >$OUTPUT_FILE
 while true ; do
 
     #Get time for Output File
-    OutputLine=$(date +"%H.%M.%S")
+    OutputLine=$(date +"%H.%M%S")
 
     #Erkenne alle Geräte im Netzwerk mit arp-scan
     #IPs=$(sudo arp-scan --localnet --numeric --quiet --ignoredups --bandwidth 1000000 | grep -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | awk '{print $1}')
@@ -70,7 +70,7 @@ while true ; do
         echo -n "Ping an ${IP}: "
 
         #Sende einen Ping
-        ping_output=$(ping -q -n -w 1 -c 1 "${IP}")
+        ping_output=$(ping -q -n -w 1 -c 3 "${IP}")
         #debug echo
         #echo "${ping_output}"
 
@@ -96,7 +96,7 @@ while true ; do
             echo "Error"
 
             #Ausgabepuffer
-            OutputLine="${OutputLine} 999"
+            OutputLine="${OutputLine} -10"
         fi
 
 
@@ -105,7 +105,7 @@ while true ; do
     #Save scan to File
     echo $OutputLine >>$OUTPUT_FILE
 
-    sleep 5
+    sleep 2
 
 done
 
