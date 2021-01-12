@@ -59,7 +59,13 @@ while true ; do
     OutputLine=$(date +"%H.%M%S")
 
     #Erkenne alle Geräte im Netzwerk mit arp-scan
-    #IPs=$(sudo arp-scan --localnet --numeric --quiet --ignoredups --bandwidth 1000000 | grep -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | awk '{print $1}')
+    IP_arp=$(sudo arp-scan --localnet --numeric --quiet --ignoredups --bandwidth 1000000 | grep -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | awk '{print $1}')
+    for IP in $IP_arp
+    do
+        if [[ "$IP" != *"$SUB"* ]]; then
+            IPs="${IPs} ${IP}"
+        fi
+    done
 
     #Alternative: nmap. Wesentlich mächtiger
     #IPs=$(nmap -nsP 192.168.178.0/24 2>/dev/null -oG - | grep "Up$" | awk '{printf "%s ", $2}')

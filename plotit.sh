@@ -4,6 +4,7 @@ FILENAME="scan.dat"
 
 echo start
 plot_arg="plot "
+#Start bei Spalte 2 da Spalte 1 für Zeiten
 column_count=2
 
 HostList="$(head -n 1 $FILENAME | cut -d ' ' -f 2- )"
