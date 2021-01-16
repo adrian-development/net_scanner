@@ -1,12 +1,12 @@
 #!/bin/bash
 
-echo "Netzwerkscanner gestartet"
+echo -e "Netzwerkscanner gestartet \nWarnung admin rechte zum generieren von ARP-Packages benötigt\n"
 
 #Konstanten
 OUTPUT_FILE="./scan.dat"
 
 #Variablen initialisieren
-IPs=
+IP_list=
 OutputLine=
 
 
@@ -17,7 +17,7 @@ while [[ ${1::1} == '-' ]] ; do
             echo "Extra Pings ausgewählt"
             shift
             while [ "${1::1}" != '-' -a -n "${1::1}" ] ; do
-                IPs="${IPs} ${1}"
+                IP_list="${IP_list} ${1}"
                 shift
             done
             ;;
@@ -31,52 +31,66 @@ while [[ ${1::1} == '-' ]] ; do
 done
 
 #Prüfe Vorausetzungen
-
 if ! command -v arp-scan &> /dev/null
 then
-    echo "arp-scan could not be found, install now? (y/n)"
-    read -p "Are you sure? " -n 1 -r
-    echo    # (optional) move to a new line
+    read -p "arp-scan could not be found, install now? (y/n)" -n 1 -r
     if [[ $REPLY =~ ^[Yy]$ ]]
     then
         sudo apt-get install arp-scan
     fi
+fi
 
-        
+if ! command -v gnuplot &> /dev/null
+then
+    read -p "gnuplot could not be found, install now? (y/n)" -n 1 -r
+    if [[ $REPLY =~ ^[Yy]$ ]]
+    then
+        sudo apt-get install gnuplot
+    fi
 fi
 
 #Zum Testen: Einmale Host-String anlegen und deise zyklisch anpingen
-IP_arp=$(sudo arp-scan --localnet --numeric --quiet --ignoredups --bandwidth 1000000 | grep -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | awk '{print $1}')
-IPs="${IPs} ${IP_arp}"
-echo Ping geht an $IPs
+#IP_arp=$(sudo arp-scan --localnet --numeric --quiet --ignoredups --bandwidth 1000000 | grep -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | awk '{print $1}')
+#IP_list="${IP_list} ${IP_arp}"
+#echo Ping geht an $IP_list
 
-echo Zeit ${IPs} >$OUTPUT_FILE
+#Outputfile Anlegen 
+echo Zeit ${IP_list} >$OUTPUT_FILE
 
 #Zyklischer Aufruf
 while true ; do
 
+    #Consol output
+    echo Next Scan:
+
     #Get time for Output File
-    OutputLine=$(date +"%H.%M%S")
+    OutputLine=$( printf '%s' "$(date +"%H:%M:%S")" )
 
     #Erkenne alle Geräte im Netzwerk mit arp-scan
     IP_arp=$(sudo arp-scan --localnet --numeric --quiet --ignoredups --bandwidth 1000000 | grep -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | awk '{print $1}')
+    #Alternative: nmap. Wesentlich mächtiger
+    #IP_list=$(nmap -nsP 192.168.178.0/24 2>/dev/null -oG - | grep "Up$" | awk '{printf "%s ", $2}')
+
+
+    #Prüfe ob Host bereits in Liste enthalten, wenn nicht füge hinten an
     for IP in $IP_arp
     do
-        if [[ "$IP" != *"$SUB"* ]]; then
-            IPs="${IPs} ${IP}"
+        if [[ "$IP_list" != *"$IP"* ]]; then
+            IP_list=$(printf '%s\t%s' "${IP_list}" "${IP}")
         fi
     done
 
-    #Alternative: nmap. Wesentlich mächtiger
-    #IPs=$(nmap -nsP 192.168.178.0/24 2>/dev/null -oG - | grep "Up$" | awk '{printf "%s ", $2}')
+    #Debug: Zeige liste
+    echo Hosts: "$IP_list"
 
     #Ping an Netzwerkteilnehmer
-    for IP in $IPs ;  do
+    for IP in $IP_list ;  do
+
         #Output for Console
         echo -n "Ping an ${IP}: "
 
         #Sende einen Ping
-        ping_output=$(ping -q -n -w 1 -c 3 "${IP}")
+        ping_output=$(ping -q -n -w 1 -c 1 "${IP}")
         #debug echo
         #echo "${ping_output}"
 
@@ -97,21 +111,24 @@ while true ; do
             echo $ping_time ms
 
             #Ausgabepuffer
-            OutputLine="${OutputLine} ${ping_time}"
+            OutputLine=$(printf '%s\t\t\t%s' "${OutputLine}" "${ping_time}")
         else   
             echo "Error"
 
             #Ausgabepuffer
-            OutputLine="${OutputLine} -10"
+            OutputLine=$(printf '%s\t\t\t%s' "${OutputLine}" "-100")
         fi
 
 
     done
 
     #Save scan to File
-    echo $OutputLine >>$OUTPUT_FILE
+    echo "$OutputLine" >>$OUTPUT_FILE
 
-    sleep 2
+    #Replace first Line to integrate new Hosts
+    sed -i "1s/.*/Zeit\t\t\t$IP_list/" $OUTPUT_FILE
+
+    sleep 1
 
 done
 
