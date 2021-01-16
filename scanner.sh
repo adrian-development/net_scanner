@@ -22,6 +22,7 @@ while [[ ${1::1} == '-' ]] ; do
             ;;
 
         --interval|-i)
+            shift
             echo "Intervall von $1 ausgwählt"
             intervall="$1"
             ;;
