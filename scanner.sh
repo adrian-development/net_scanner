@@ -17,7 +17,7 @@ while [[ ${1::1} == '-' ]] ; do
             echo "Extra Pings ausgewählt"
             shift
             while [ "${1::1}" != '-' -a -n "${1::1}" ] ; do
-                IP_list="${IP_list} ${1}"
+                IP_list=$( printf '%s%20s' "${IP_list}" "${1}")
                 shift
             done
             ;;
@@ -64,7 +64,7 @@ while true ; do
     echo Next Scan:
 
     #Get time for Output File
-    OutputLine=$( printf '%s' "$(date +"%H:%M:%S")" )
+    OutputLine=$( printf '%-20s' "$(date +"%H:%M:%S")" )
 
     #Erkenne alle Geräte im Netzwerk mit arp-scan
     IP_arp=$(sudo arp-scan --localnet --numeric --quiet --ignoredups --bandwidth 1000000 | grep -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | awk '{print $1}')
@@ -76,7 +76,7 @@ while true ; do
     for IP in $IP_arp
     do
         if [[ "$IP_list" != *"$IP"* ]]; then
-            IP_list=$(printf '%s\t%s' "${IP_list}" "${IP}")
+            IP_list=$(printf '%s%20s' "${IP_list}" "${IP}")
         fi
     done
 
@@ -111,12 +111,12 @@ while true ; do
             echo $ping_time ms
 
             #Ausgabepuffer
-            OutputLine=$(printf '%s\t\t\t%s' "${OutputLine}" "${ping_time}")
+            OutputLine=$(printf '%s%20s' "${OutputLine}" "${ping_time}")
         else   
             echo "Error"
 
             #Ausgabepuffer
-            OutputLine=$(printf '%s\t\t\t%s' "${OutputLine}" "-100")
+            OutputLine=$(printf '%s%20s' "${OutputLine}" "-100")
         fi
 
 
@@ -126,7 +126,8 @@ while true ; do
     echo "$OutputLine" >>$OUTPUT_FILE
 
     #Replace first Line to integrate new Hosts
-    sed -i "1s/.*/Zeit\t\t\t$IP_list/" $OUTPUT_FILE
+    first_line=$( printf '%-20s%s' "Zeit" "$IP_list" )
+    sed -i "1s/.*/$first_line/" $OUTPUT_FILE
 
     sleep 1
 
