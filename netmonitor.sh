@@ -142,7 +142,10 @@ if [[ scan_mode -eq "1" ]]; then
         OutputLine=$( printf '%-20s' "$(date +"%H:%M:%S")" )
 
         #Erkenne alle Geräte im Netzwerk mit arp-scan
-        IP_arp=$(sudo arp-scan --localnet --numeric --quiet --ignoredups --bandwidth 1000000 | grep -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | awk '{print $1}')
+        IP_arp=$(sudo arp-scan --localnet --numeric --quiet --ignoredups --bandwidth 1000000 | 
+            #Regex:         Valide IP-Adressse   spacing    MAC-Adresse
+            grep -E '^([0-9]{1,3}\.){3}[0-9]{1,3}\s+([a-f0-9]{2}:){5}[a-f0-9]{2}' |
+            awk '{print $1}')
         #Alternative: nmap. Wesentlich mächtiger
         #IP_list=$(nmap -nsP 192.168.178.0/24 2>/dev/null -oG - | grep "Up$" | awk '{printf "%s ", $2}')
 
