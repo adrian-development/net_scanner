@@ -1,5 +1,11 @@
 #!/bin/bash
-
+#----------------------------------------------------------
+#    File-name: <~/bin/hello.sh>#     Language: bash script
+#     Synopsis:
+#  Description: My first bash program
+#      Project: Shell Script Programming Course
+#       Author: Michael.Zwanger@th-nuernberg.de
+#----------------------------------------------------------
 echo -e "Netzwerkscanner gestartet \nWarnung: Admin Rechte zum generieren von ARP-Packages benötigt\n"
 
 #Variablen initialisieren
