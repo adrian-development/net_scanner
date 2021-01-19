@@ -9,10 +9,13 @@
 #----------------------------------------------------------
 
 #Variablen initialisieren
-IP_list=
-OutputLine=
 scan_mode=1
 intervall=10
+filename=
+IP_list=
+first_line
+OutputLine=
+
 
 #Help Funktion
 function help ()
@@ -27,10 +30,10 @@ DESCRIPTION
     Netmonitor ermittelt über einen ARP-Scan zyklisch sämtliche Geräte in Ihrem IPv4 Netzwerkes und pingt dieses an
     um die performance über längere Zeitabschnitte zu protokollieren. Die Messdaten werden in einer separaten Datei
     gespeichert und nach Ende des Scans graphisch dargestellt.
-    Die Messung wird durch STRG+C gestoppt
+    Die Messung wird durch STRG+C gestoppt. Werte von -100 in der Auswertung stehen für eine Nichterreichbarkeit.
 EXAMPLES
     netmonitor.sh: Startet die Aufzeichung im Standardintervall von 10 Sekunden
-    netmonitor.sh --ping www.google.de 141.75.201.12 --intervall 20: Pingt zusätzliche die google und die genannte IP
+    netmonitor.sh --ping www.google.de 141.75.201.12 --intervall 20: Pingt zusätzliche google und die genannte IP
     alle 20 Sekunden an.
     netmonitor.sh --auswertung scan_2021-01-17: Startet keinen Scan sondern wertet eine bereits erstellt Datei aus
 AUTHOR
@@ -48,7 +51,7 @@ while [[ ${1::1} == '-' ]] ; do
             #Hänge alle Angegebnen Ziele an IP Liste an
             while [[ "${2::1}" != '-' ]] && [[ -n "${2::1}" ]] ; do
                 shift
-                IP_list=$( printf '%s%20s' "${IP_list}" "${1}")
+                IP_list=$( printf '%s %20s' "${IP_list}" "${1}")
             done
             ;;
 
@@ -117,17 +120,23 @@ then
     fi
 fi
 
+
+
+#************************* NETWORK SCANNER PART *****************************************************
+
 #Prüfe ob ein Netzwerkscann ausgeführt werden soll
 if [[ scan_mode -eq "1" ]]; then
 
     #Consolen Output
-    echo -e "Netzwerkscanner gestartet \nWarnung: Admin Rechte zum generieren von ARP-Packages benötigt\n"
+    echo -e "\nNetzwerkscanner gestartet \nWarnung: Admin Rechte zum generieren von ARP-Packages benötigt\n"
 
     #Generiere Dateinamen
     filename=$(date +"scan_%F")
 
     #Outputfile Anlegen 
-    echo Zeit "${IP_list}" >"$filename"
+    first_line=$( printf '%-20s %s' "Zeit" "$IP_list" )
+    echo "$first_line" >"$filename"        
+        
 
     #Ermögliche STRG+C zum beenden der Schleife
     trap break INT
@@ -136,7 +145,7 @@ if [[ scan_mode -eq "1" ]]; then
     while true ; do
 
         #Consol output
-        echo -n "Nächster Scann beginnt: "
+        echo -e "\nNächster Scann beginnt: "
 
         #Get time for Output File
         OutputLine=$( printf '%-20s' "$(date +"%H:%M:%S")" )
@@ -154,12 +163,12 @@ if [[ scan_mode -eq "1" ]]; then
         for IP in $IP_arp
         do
             if [[ "$IP_list" != *"$IP"* ]]; then
-                IP_list=$(printf '%s%20s' "${IP_list}" "${IP}")
+                IP_list=$(printf '%s %20s' "${IP_list}" "${IP}")
             fi
         done
 
         #Debug: Zeige liste
-        echo Hosts: "$IP_list"
+        #echo Hosts: "$IP_list"
 
         #Ping an Netzwerkteilnehmer
         for IP in $IP_list ;  do
@@ -189,7 +198,7 @@ if [[ scan_mode -eq "1" ]]; then
                 echo "$ping_time" ms
 
                 #Ausgabepuffer
-                OutputLine=$(printf '%s%20s' "${OutputLine}" "${ping_time}")
+                OutputLine=$(printf '%s %20s' "${OutputLine}" "${ping_time}")
             else   
                 echo "Error"
 
@@ -204,7 +213,7 @@ if [[ scan_mode -eq "1" ]]; then
         echo "$OutputLine" >>"$filename"
 
         #Replace first Line to integrate new Hosts
-        first_line=$( printf '%-20s%s' "Zeit" "$IP_list" )
+        first_line=$( printf '%-20s %s' "Zeit" "$IP_list" )
         sed -i "1s/.*/$first_line/" "$filename"
 
         sleep "$intervall"
@@ -214,12 +223,85 @@ if [[ scan_mode -eq "1" ]]; then
     #Stop trap
     trap - INT
 
+    echo -e "\nScan beendet\n"
+
 fi
 
 
-#Starte Auswertung
-./plotit.sh "$filename"
 
-echo Fertig
+#********************** GNUPLOT PART ******************************************
+#Initialisiere Variablen
+HostList=
+column_count=
+plot_arg=
+zeit_start=
+zeit_end=
+line_count=
+word_count=
+
+#Start Konsolenoutput
+echo -e "\n\n\nStarting to Plot File ${filename}:"
+
+#Entnehme alle Hosts aus erster Zeile, trenne erste Spalte da dort "Zeit" steht
+HostList="$(head -n 1 "$filename" | cut -d ' ' -f 2- )"
+
+#Debug, zeige Hostliste
+echo "Hosts: $HostList"
+
+#Setze Spaltenzähler auf 1 damit spalte 2 zuerst ausgelesen wird
+column_count=1
+
+#Baue Kommando für Gnuplot
+plot_arg="plot "
+for host in $HostList
+do
+    ((column_count++))
+    plot_arg="${plot_arg} \"$filename\" using 1:$column_count title \"$host\" with linespoints,"
+done
+#Debug, zeige Kommando
+#echo "$plot_arg"
+#echo "Spaltenzahl: $column_count"
+
+#Erfasse Zeitrange, da gnuplot bei Zeiten auf x-Achse kein Autoscale verwenden kann
+zeit_start=$(sed -n 2p "$filename" | cut -d ' ' -f 1)
+zeit_end=$(tail -n 1 "$filename" | cut -d ' ' -f 1)
+#Debug zeige Zeiten
+echo "Start: $zeit_start Ende: $zeit_end"
+
+#Vorverarbeitung, fülle leere Felder da gnuplot damit nicht umgehen kann
+line_count=1
+
+#Lese Datei line by line
+while read -r line; do
+    #Ermittle Spaltenzahl in dieser Zeile
+    word_count=$( echo "$line" | wc -w)
+
+    #Baue neue Zeile, füge fehlende Felder mit -100 ein
+    while [[ $word_count < $column_count ]] ; do
+        line=$( printf '%s%20s' "$line" "-100" )
+        ((word_count++))
+    done
+
+    #Ersetze Zeile durch bearbeitete Zeile
+    sed -i "${line_count}s/.*/$line/" "$filename"
+
+    ((line_count++))
+done < "$filename"
+
+
+#Parametrisiere Gnuplot mit HERE Dokument und obigem Kommando
+gnuplot -p <<PLOT
+set title "Netzwerkmonitor"
+set xlabel "Uhrzeit"
+set ylabel "Ping in ms"
+set yrange [-200:1000]
+set xdata time
+set timefmt "%H:%M:%S"
+set format x "%H:%M:%S"
+set xrange ["$zeit_start":"$zeit_end"]
+$plot_arg
+PLOT
+
+echo "Plot fertig"
 
 exit 0
