@@ -13,7 +13,7 @@ scan_mode=1
 intervall=10
 filename=
 IP_list=
-first_line
+first_line=
 OutputLine=
 
 
@@ -80,7 +80,7 @@ while [[ ${1::1} == '-' ]] ; do
             fi
             ;;
 
-        --hepl|-h)
+        --help|-h)
             #Geben Manpage aus
             help
             exit 0
@@ -145,7 +145,7 @@ if [[ scan_mode -eq "1" ]]; then
     while true ; do
 
         #Consol output
-        echo -e "\nNächster Scann beginnt: "
+        echo -e "\nNächster Scann beginnt (STRG+C zum abbrechen): "
 
         #Get time for Output File
         OutputLine=$( printf '%-20s' "$(date +"%H:%M:%S")" )
