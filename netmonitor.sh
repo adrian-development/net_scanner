@@ -15,6 +15,8 @@ filename=
 IP_list=
 first_line=
 OutputLine=
+network="--localnet"
+interface=""
 
 
 #Help Funktion
@@ -51,18 +53,41 @@ while [[ ${1::1} == '-' ]] ; do
             #Hänge alle Angegebnen Ziele an IP Liste an
             while [[ "${2::1}" != '-' ]] && [[ -n "${2::1}" ]] ; do
                 shift
-                IP_list=$( printf '%s %20s' "${IP_list}" "${1}")
+                IP_list=$( printf '%s%20s' "${IP_list}" "${1} ")
             done
             ;;
 
-        --interval|-i)
+        --delay|-d)
             shift
-            #Prüfe ob Intervall eine Ganzzahl ist
+            #Prüfe ob Verzögerung eine Ganzzahl ist
             if  [[ $1 =~ ^[0-9]+$ ]]; then
-                echo "Intervall von $1 ausgwählt"
+                echo "Verzögerung von $1 ausgwählt"
                 intervall="$1"
             else
                 echo "Invalides Intervall: $1"
+                exit 1
+            fi
+            ;;
+
+        --interface|-i)
+            shift
+            #Prüfe ob ein Interface angegeben
+            if [[ $1 =~ ^[^-]+ ]]; then
+                echo "Interface $1 ausgewaehlt"
+                interface="--interface $1"
+            else   
+                echo "Invalides Interface: $1"
+                exit 1
+            fi
+            ;;
+
+        --network|-n)
+            shift
+            #Prüfe ob ein Netzwerk angegeben ist
+            if [[ $1 =~ ^[^-]+ ]]; then
+                network="$1"
+            else   
+                echo "Invalides Netzwerk: $1"
                 exit 1
             fi
             ;;
@@ -127,14 +152,14 @@ fi
 #Prüfe ob ein Netzwerkscann ausgeführt werden soll
 if [[ scan_mode -eq "1" ]]; then
 
-    #Consolen Output
-    echo -e "\nNetzwerkscanner gestartet \nWarnung: Admin Rechte zum generieren von ARP-Packages benötigt\n"
+    #Konsolen Output
+    echo -e "Netzwerkscanner gestartet \nWarnung: Admin Rechte zum generieren von ARP-Packages benötigt"
 
     #Generiere Dateinamen
     filename=$(date +"scan_%F")
 
     #Outputfile Anlegen 
-    first_line=$( printf '%-20s %s' "Zeit" "$IP_list" )
+    first_line=$( printf '%-20s%s' "Zeit" "$IP_list " )
     echo "$first_line" >"$filename"        
         
 
@@ -148,10 +173,10 @@ if [[ scan_mode -eq "1" ]]; then
         echo -e "\nNächster Scann beginnt (STRG+C zum abbrechen): "
 
         #Get time for Output File
-        OutputLine=$( printf '%-20s' "$(date +"%H:%M:%S")" )
+        OutputLine=$( printf '%-20s' "$(date +"%H:%M:%S") " )
 
         #Erkenne alle Geräte im Netzwerk mit arp-scan
-        IP_arp=$(sudo arp-scan --localnet --numeric --quiet --ignoredups --bandwidth 1000000 | 
+        IP_arp=$(sudo arp-scan $network $interface --numeric --quiet --ignoredups --bandwidth 1000000 | 
             #Regex:         Valide IP-Adressse   spacing    MAC-Adresse
             grep -E '^([0-9]{1,3}\.){3}[0-9]{1,3}\s+([a-f0-9]{2}:){5}[a-f0-9]{2}' |
             awk '{print $1}')
@@ -163,7 +188,7 @@ if [[ scan_mode -eq "1" ]]; then
         for IP in $IP_arp
         do
             if [[ "$IP_list" != *"$IP"* ]]; then
-                IP_list=$(printf '%s %20s' "${IP_list}" "${IP}")
+                IP_list=$(printf '%s%20s' "${IP_list}" "${IP} ")
             fi
         done
 
@@ -198,12 +223,12 @@ if [[ scan_mode -eq "1" ]]; then
                 echo "$ping_time" ms
 
                 #Ausgabepuffer
-                OutputLine=$(printf '%s %20s' "${OutputLine}" "${ping_time}")
+                OutputLine=$(printf '%s%20s' "${OutputLine}" "${ping_time} ")
             else   
                 echo "Error"
 
                 #Ausgabepuffer
-                OutputLine=$(printf '%s%20s' "${OutputLine}" "-100")
+                OutputLine=$(printf '%s%20s' "${OutputLine}" "-100 ")
             fi
 
 
@@ -213,7 +238,7 @@ if [[ scan_mode -eq "1" ]]; then
         echo "$OutputLine" >>"$filename"
 
         #Replace first Line to integrate new Hosts
-        first_line=$( printf '%-20s %s' "Zeit" "$IP_list" )
+        first_line=$( printf '%-20s%s' "Zeit" "$IP_list " )
         sed -i "1s/.*/$first_line/" "$filename"
 
         sleep "$intervall"
