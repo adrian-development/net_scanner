@@ -73,7 +73,7 @@ while [[ ${1::1} == '-' ]] ; do
             shift
             #Prüfe ob ein Interface angegeben
             if [[ $1 =~ ^[^-]+ ]]; then
-                echo "Interface $1 ausgewaehlt"
+                echo "Interface $1 ausgewählt"
                 interface="--interface $1"
             else   
                 echo "Invalides Interface: $1"
@@ -85,6 +85,7 @@ while [[ ${1::1} == '-' ]] ; do
             shift
             #Prüfe ob ein Netzwerk angegeben ist
             if [[ $1 =~ ^[^-]+ ]]; then
+                echo "Netzwerk $1 ausgewählt"
                 network="$1"
             else   
                 echo "Invalides Netzwerk: $1"
@@ -153,10 +154,10 @@ fi
 if [[ scan_mode -eq "1" ]]; then
 
     #Konsolen Output
-    echo -e "Netzwerkscanner gestartet \nWarnung: Admin Rechte zum generieren von ARP-Packages benötigt"
+    echo -e "\nNetzwerkscanner gestartet \nWarnung: Admin Rechte zum generieren von ARP-Packages benötigt"
 
     #Generiere Dateinamen
-    filename=$(date +"scan_%F")
+    filename=$(date +"scan_%F.dat")
 
     #Outputfile Anlegen 
     first_line=$( printf '%-20s%s' "Zeit" "$IP_list " )
@@ -263,6 +264,12 @@ zeit_start=
 zeit_end=
 line_count=
 word_count=
+
+#Prüfe ob Logdatei genug Aufzeichnungen enthält
+if [[ $(wc -l "$filename" | cut -d " " -f 1) -lt 3 ]]; then
+    echo "Datei muss mindestens 2 Messwerte enthalten"
+    exit 1
+fi
 
 #Start Konsolenoutput
 echo -e "\n\n\nStarting to Plot File ${filename}:"
