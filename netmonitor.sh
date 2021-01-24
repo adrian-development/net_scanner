@@ -35,7 +35,7 @@ EXAMPLES
     netmonitor.sh: Startet die Aufzeichung im Standardintervall von 10 Sekunden
     netmonitor.sh --ping www.google.de 141.75.201.12 --intervall 20: Pingt zusätzliche google und die genannte IP
     alle 20 Sekunden an.
-    netmonitor.sh --auswertung scan_2021-01-17: Startet keinen Scan sondern wertet eine bereits erstellt Datei aus
+    netmonitor.sh --auswertung scan_2021-01-17: Startet keinen Scan sondern wertet eine bereits erstellt Datei aus.
 AUTHOR
     Adrian Jäger - jaegerad74878@th-nuernberg.de
 HELPTEXT
@@ -87,7 +87,7 @@ while [[ ${1::1} == '-' ]] ; do
             ;;
 
         *)
-            echo "Unbekannte Option: $1"
+            echo -e "Unbekannte Option: $1 \nHilfe mit netmonitor.sh -h"
             exit 1
             ;;
     esac
