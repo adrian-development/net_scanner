@@ -26,20 +26,55 @@ function help ()
 NAME
     netmonitor.sh
     Nimmt eine Analyse Ihres Netzwerks vor.
+
 SYNOPSIS
-    netmonitor.sh [-p|--ping hosts] [-h|--help] [-i|--intervall wartezeit] [-a|--auswertung filename]
+    netmonitor.sh [-h|--help] [-p|--ping hosts] [-d|--delay wartezeit] [-i|--interface Netzwerkschnittstelle] 
+        [-n|--network Netzwerkadresse] [-a|--auswertung filename]
+
 DESCRIPTION
     Netmonitor ermittelt über einen ARP-Scan zyklisch sämtliche Geräte in Ihrem IPv4 Netzwerkes und pingt dieses an
     um die performance über längere Zeitabschnitte zu protokollieren. Die Messdaten werden in einer separaten Datei
     gespeichert und nach Ende des Scans graphisch dargestellt.
-    Die Messung wird durch STRG+C gestoppt. Werte von -100 in der Auswertung stehen für eine Nichterreichbarkeit.
+    Die Messung wird durch STRG+C gestoppt. Werte von -100 in der Auswertung stehen für einen Timeout beim Ping.
+
+OPTIONS
+    --help | -h
+        Zeigt diese Seite
+
+    --ping | -p
+        Erlaubt eine beliebig lange Liste an Hosts zum erfassen hinzuzufügen. Es können sowohl URLs als 
+        auch IP-Adressen durche Leerzeichen getrennt angegeben werden.
+
+    --delay | -d
+        Legt die Wartezeit zwischen zwei Messungen in Sekunden fest. Nur Ganzzahlen erlaubt.
+
+    --interface | -i
+        Legt das zu verwendende Netzwerkinterface für den ARP-Scan fest. z.B. "eth0"
+    
+    --network | -n 
+        Legt das zu Scannende Netzwerk im Format "Netzwerkadresse/Subnetzmaske" fest, z.B. "192.168.178.0/24"
+
+    --auswertung | -a
+        Nimmt ausschließlich eine Auswertung der angegebenen Logdatei vor.
+    
 EXAMPLES
-    netmonitor.sh: Startet die Aufzeichung im Standardintervall von 10 Sekunden
-    netmonitor.sh --ping www.google.de 141.75.201.12 --intervall 20: Pingt zusätzliche google und die genannte IP
-    alle 20 Sekunden an.
-    netmonitor.sh --auswertung scan_2021-01-17: Startet keinen Scan sondern wertet eine bereits erstellt Datei aus.
+    netmonitor.sh
+        Startet die Aufzeichung mit Standardverzögerung von 10 Sekunden im Automatisch ermittelten Netzwerk und mit
+        dem am höchsten priorisierten Netzwerkinterface.
+
+    netmonitor.sh --ping www.google.de 141.75.201.12 --delay 20
+        Pingt zusätzliche google und die genannte IP alle 20 Sekunden an.
+
+    netmonitor.sh --auswertung scan_2021-01-17.dat
+        Startet keinen Scan sondern wertet eine bereits erstellt Datei aus.
+
+    netmonitor.sh -d 5 -i wlp2s0 -n 192.168.178.0/24
+        Wartezeit von 5 Sekunden zwischen scanns, verwende interface wlp2s0 für Scanns, Suche im Netz 192.168.178.0 mit 
+        einem Netzanteil von 24 Bit -> Subnetzmaske 255.255.255.0 
+
 AUTHOR
     Adrian Jäger - jaegerad74878@th-nuernberg.de
+
 HELPTEXT
 
     return
@@ -180,6 +215,7 @@ if [[ scan_mode -eq "1" ]]; then
         IP_arp=$(sudo arp-scan $network $interface --numeric --quiet --ignoredups --bandwidth 1000000 | 
             #Regex:         Valide IP-Adressse   spacing    MAC-Adresse
             grep -E '^([0-9]{1,3}\.){3}[0-9]{1,3}\s+([a-f0-9]{2}:){5}[a-f0-9]{2}' |
+            #AWK: Gefundene Hostst als Liste ausgeben
             awk '{print $1}')
         #Alternative: nmap. Wesentlich mächtiger
         #IP_list=$(nmap -nsP 192.168.178.0/24 2>/dev/null -oG - | grep "Up$" | awk '{printf "%s ", $2}')
@@ -272,10 +308,10 @@ if [[ $(wc -l "$filename" | cut -d " " -f 1) -lt 3 ]]; then
 fi
 
 #Start Konsolenoutput
-echo -e "\n\n\nStarting to Plot File ${filename}:"
+echo -e "\n\nStarting to Plot File ${filename}:"
 
 #Entnehme alle Hosts aus erster Zeile, trenne erste Spalte da dort "Zeit" steht
-HostList="$(head -n 1 "$filename" | cut -d ' ' -f 2- )"
+HostList="$(head -n 1 "$filename" | cut -d ' ' -f 2- | tr -s " ")"
 
 #Debug, zeige Hostliste
 echo "Hosts: $HostList"
@@ -327,10 +363,12 @@ set title "Netzwerkmonitor"
 set xlabel "Uhrzeit"
 set ylabel "Ping in ms"
 set yrange [-200:1000]
+set ytics 0, 200, 1000
 set xdata time
 set timefmt "%H:%M:%S"
 set format x "%H:%M:%S"
 set xrange ["$zeit_start":"$zeit_end"]
+set label "Timeout   " at "$zeit_start", -100 right
 $plot_arg
 PLOT
 
