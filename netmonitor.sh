@@ -5,7 +5,7 @@
 #     Synopsis: netmonitor.sh [-p|--ping hosts] [-h|--help] [-i|--intervall wartezeit] [-a|--auswertung filename]
 #  Description: Ein tool zur Analyse des lokalen Netzwerks
 #      Project: Shell Script Programming Course
-#       Author: jaegerad74878@th-nuernberg.de
+#       Author: Adrian
 #----------------------------------------------------------
 
 #Variablen initialisieren
@@ -73,7 +73,7 @@ EXAMPLES
         einem Netzanteil von 24 Bit -> Subnetzmaske 255.255.255.0 
 
 AUTHOR
-    Adrian Jäger - jaegerad74878@th-nuernberg.de
+    Adrian
 
 HELPTEXT
 
